@@ -1311,6 +1311,42 @@ function matchWord(spoken, target) {
   return false;
 }
 
+// ═══════════════════════════════════════════════════
+// SUONO BUZZER (Web Audio API)
+// ═══════════════════════════════════════════════════
+function playBuzzerSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Tono principale (800 Hz)
+    const osc1 = ctx.createOscillator();
+    osc1.type = "square";
+    osc1.frequency.setValueAtTime(800, ctx.currentTime);
+    
+    // Tono secondario (600 Hz) per dare corpo
+    const osc2 = ctx.createOscillator();
+    osc2.type = "sawtooth";
+    osc2.frequency.setValueAtTime(600, ctx.currentTime);
+    
+    // Volume e inviluppo
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+    
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc1.start(ctx.currentTime);
+    osc2.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.4);
+    osc2.stop(ctx.currentTime + 0.4);
+    
+    // Cleanup
+    setTimeout(() => ctx.close(), 500);
+  } catch(e) { /* Audio non supportato, ignora */ }
+}
+
 const F = "'Outfit', system-ui, -apple-system, sans-serif";
 
 // Dynamic font size for word display
@@ -1729,6 +1765,7 @@ function MainGame() {
         setSpeechProcessed(false);
         setManualOverride(false);
         if (navigator.vibrate) navigator.vibrate(200);
+        playBuzzerSound();
         return true;
       });
     });
