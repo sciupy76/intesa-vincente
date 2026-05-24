@@ -2040,6 +2040,7 @@ function MainGame() {
     setWaitingForExtract(true);
     setBuzzed(false);
     setBuzzCountdown(0);
+    setIsRaddoppio(false);
   }, [currentWord, isRaddoppio, notifyBuzzResult, notifyBuzzer]);
 
   // Sync refs con stato corrente (per snapshot in handleRevisione)
@@ -2072,6 +2073,7 @@ function MainGame() {
       setBuzzed(false);
       setBuzzCountdown(0);
       setSpeechText(null);
+      setIsRaddoppio(false);
     }
     // Se non matcha: il countdown continua, il conduttore vede il testo e decide
   }, [speechText, buzzed, speechEnabled, speechProcessed, manualOverride, currentWord]);
@@ -2177,6 +2179,7 @@ function MainGame() {
     setBuzzed(false);
     setBuzzCountdown(0);
     setInRevisione(false);
+    setIsRaddoppio(false);
   };
 
   // Handle error
@@ -2198,6 +2201,7 @@ function MainGame() {
     setBuzzed(false);
     setBuzzCountdown(0);
     setInRevisione(false);
+    setIsRaddoppio(false);
   };
 
   /// Handle passo — ferma il tempo, scala un passo, lascia la parola visibile
@@ -2209,6 +2213,7 @@ function MainGame() {
     setLastResult("passo");
     setCurrentWord(null);
     setWaitingForExtract(true);
+    setIsRaddoppio(false);
     if (buzzerEnabled) notifyBuzzer(false);
   };
 
