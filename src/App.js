@@ -1877,6 +1877,8 @@ function MainGame() {
   const [timeLeft, setTimeLeft] = useState(60);
   const [score, setScore] = useState(0);
   const [isRaddoppio, setIsRaddoppio] = useState(false);
+  const [tvWordsOnly, setTvWordsOnly] = useState(false);
+  const [raddoppioUsati, setRaddoppioUsati] = useState(0);
   const [currentWord, setCurrentWord] = useState(null);
   const [lastWord, setLastWord] = useState(null);
   const [lastResult, setLastResult] = useState(null);
@@ -1911,21 +1913,30 @@ function MainGame() {
   const correctCountRef = useRef(0);
   const errorCountRef = useRef(0);
 
+  // Helper: filtra e pulisce le parole dal simbolo ®
+  const getSingleWords = useCallback(() => {
+    let words = [...new Set(PAROLE_SINGOLE)];
+    if (tvWordsOnly) {
+      words = words.filter(w => w.includes("®"));
+    }
+    return words.map(w => w.replace(/\s*®\s*$/, "").trim());
+  }, [tvWordsOnly]);
+
   const initQueues = useCallback(() => {
-    singleQueueRef.current = shuffle([...new Set(PAROLE_SINGOLE)]);
+    singleQueueRef.current = shuffle(getSingleWords());
     composteQueueRef.current = shuffle([...new Set(PAROLE_COMPOSTE)]);
-  }, []);
+  }, [getSingleWords]);
 
   const getNextWord = useCallback(() => {
     const queue = isRaddoppio ? composteQueueRef.current : singleQueueRef.current;
     if (queue.length === 0) {
-      // Ricarica il sacco solo quando completamente esaurito
       if (isRaddoppio) composteQueueRef.current = shuffle([...new Set(PAROLE_COMPOSTE)]);
-      else singleQueueRef.current = shuffle([...new Set(PAROLE_SINGOLE)]);
+      else singleQueueRef.current = shuffle(getSingleWords());
       return (isRaddoppio ? composteQueueRef.current : singleQueueRef.current).pop();
     }
-    return queue.pop();
-  }, [isRaddoppio]);
+    const word = queue.pop();
+    return word.replace(/\s*®\s*$/, "").trim();
+  }, [isRaddoppio, getSingleWords]);
 
   // Game timer
   useEffect(() => {
@@ -2085,6 +2096,7 @@ function MainGame() {
     setWaitingForExtract(true);
     setTimerRunning(false);
     setIsRaddoppio(false);
+    setRaddoppioUsati(0);
     setBuzzed(false);
     setBuzzCountdown(0);
     setSpeechText(null);
@@ -2113,6 +2125,7 @@ function MainGame() {
     setWaitingForExtract(true);
     setTimerRunning(false);
     setIsRaddoppio(false);
+    setRaddoppioUsati(0);
     setBuzzed(false);
     setBuzzCountdown(0);
     setSpeechText(null);
@@ -2225,6 +2238,8 @@ function MainGame() {
   const toggleRaddoppio = () => {
     if (!waitingForExtract) return;
     if (!isRaddoppio && score < 2) return; // serve almeno 2 punti per attivare
+    if (!isRaddoppio && raddoppioUsati >= 2) return; // massimo 2 raddoppi per partita
+    if (!isRaddoppio) setRaddoppioUsati(p => p + 1); // conta l'attivazione
     setIsRaddoppio(p => !p);
   };
 
@@ -2253,6 +2268,31 @@ function MainGame() {
             <button onClick={() => setTimeLimit(p => Math.max(55, p - 5))} style={{ width:64, height:64, borderRadius:"50%", border:"2px solid rgba(255,255,255,0.2)", background:"rgba(255,255,255,0.08)", color:"#fff", fontSize:28, fontWeight:800, cursor:"pointer", fontFamily:F }}>−5</button>
             <span style={{ fontSize:64, fontWeight:900, minWidth:90, textAlign:"center", fontVariantNumeric:"tabular-nums" }}>{timeLimit}</span>
             <button onClick={() => setTimeLimit(p => Math.min(65, p + 5))} style={{ width:64, height:64, borderRadius:"50%", border:"2px solid rgba(255,255,255,0.2)", background:"rgba(255,255,255,0.08)", color:"#fff", fontSize:28, fontWeight:800, cursor:"pointer", fontFamily:F }}>+5</button>
+          </div>
+        </div>
+
+        {/* Toggle parole dalla trasmissione */}
+        <div
+          onClick={() => setTvWordsOnly(p => !p)}
+          style={{
+            background: tvWordsOnly ? "rgba(52,199,89,0.15)" : "rgba(255,255,255,0.04)",
+            borderRadius:20, padding:"18px 24px", width:"100%", maxWidth:380,
+            border: tvWordsOnly ? "2px solid rgba(52,199,89,0.4)" : "1px solid rgba(255,255,255,0.08)",
+            marginBottom:24, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between",
+            transition:"all 0.2s"
+          }}
+        >
+          <div>
+            <div style={{ fontSize:16, fontWeight:700 }}>📺 Parole dalla trasmissione</div>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,0.4)", marginTop:4 }}>Solo parole uscite nel programma TV</div>
+          </div>
+          <div style={{
+            width:52, height:30, borderRadius:15, padding:3,
+            background: tvWordsOnly ? "#34C759" : "rgba(255,255,255,0.15)",
+            transition:"background 0.2s", display:"flex", alignItems:"center",
+            justifyContent: tvWordsOnly ? "flex-end" : "flex-start"
+          }}>
+            <div style={{ width:24, height:24, borderRadius:"50%", background:"#fff", transition:"all 0.2s" }} />
           </div>
         </div>
 
@@ -2311,7 +2351,7 @@ function MainGame() {
         <button onClick={startGame} style={{ width:"100%", maxWidth:380, padding:"22px 20px", borderRadius:18, border:"none", background:"linear-gradient(135deg,#4A90D9,#357ABD)", color:"#fff", fontSize:22, fontWeight:900, letterSpacing:2, cursor:"pointer", boxShadow:"0 8px 32px rgba(74,144,217,0.35)", fontFamily:F }}>
           {buzzerEnabled ? "CONFIGURA BUZZER" : "INIZIA IL GIOCO"}
         </button>
-        <p style={{ marginTop:20, fontSize:13, color:"rgba(255,255,255,0.2)", textAlign:"center" }}>{PAROLE_SINGOLE.length} parole · {PAROLE_COMPOSTE.length} espressioni</p>
+        <p style={{ marginTop:20, fontSize:13, color:"rgba(255,255,255,0.2)", textAlign:"center" }}>{tvWordsOnly ? PAROLE_SINGOLE.filter(w => w.includes("®")).length : PAROLE_SINGOLE.length} parole · {PAROLE_COMPOSTE.length} espressioni</p>
       </div>
     );
   }
@@ -2468,7 +2508,7 @@ function MainGame() {
       </div>
 
       {/* Raddoppio */}
-      <button onClick={toggleRaddoppio} disabled={!waitingForExtract || (!isRaddoppio && score < 2)} style={{
+      <button onClick={toggleRaddoppio} disabled={!waitingForExtract || (!isRaddoppio && score < 2) || (!isRaddoppio && raddoppioUsati >= 2)} style={{
         margin:"6px 0 2px", padding:"10px 24px", borderRadius:28,
         border:`2px solid ${isRaddoppio?"#FF9500":"rgba(255,255,255,0.12)"}`,
         background:isRaddoppio?"rgba(255,149,0,0.2)":"rgba(255,255,255,0.05)",
@@ -2477,7 +2517,7 @@ function MainGame() {
         textTransform:"uppercase", fontFamily:F,
         opacity:waitingForExtract?1:0.35, transition:"all 0.2s"
       }}>
-        {isRaddoppio ? "⚡ RADDOPPIO ×2" : "Raddoppio"}
+        {isRaddoppio ? "⚡ RADDOPPIO ×2" : `Raddoppio (${2 - raddoppioUsati})`}
       </button>
 
       {/* EXTRACT BUTTON */}
